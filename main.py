@@ -12,7 +12,7 @@ from vidgear.gears import CamGear
 import numpy as np
 
 
-def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, image_resolution,
+def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, image_resolution,
          single_person, use_tiny_yolo, disable_tracking, max_batch_size, disable_vidgear, save_video, video_format,
          video_framerate, device, exercise_type):
     if device is not None:
@@ -29,15 +29,11 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
     # has_display = False
     video_writer = None
 
-    if filename is not None:
-        video = cv2.VideoCapture(filename)
+    if disable_vidgear:
+        video = cv2.VideoCapture(camera_id)
         assert video.isOpened()
     else:
-        if disable_vidgear:
-            video = cv2.VideoCapture(camera_id)
-            assert video.isOpened()
-        else:
-            video = CamGear(camera_id).start()
+        video = CamGear(camera_id).start()
 
     if use_tiny_yolo:
         yolo_model_def = "./models/detectors/yolo/config/yolov3-tiny.cfg"
@@ -79,14 +75,10 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
     while True:
         t = time.time()
 
-        if filename is not None or disable_vidgear:
-            ret, frame = video.read()
-            if not ret:
-                break
-        else:
-            frame = video.read()
-            if frame is None:
-                break
+        
+        frame = video.read()
+        if frame is None:
+            break
 
         pts = model.predict(frame)
         if not disable_tracking:
@@ -130,8 +122,10 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                             fontScale*0.35, color, thickness, cv2.LINE_AA)
 
         if exercise_type == 1:  # for pushUps
+            print(data)
 
             if (len(pts) > 0):
+                
                 if (data > 160):
                     flag = 0
                 if (data < 90):
@@ -164,7 +158,7 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                                 fontScale, color, thickness*2, cv2.LINE_AA)
 
         elif exercise_type == 3:  # for PullUps
-
+            print(data)
             if (len(pts) > 0):
                 if (data == -1 and prev_data == 1):
                     counter = counter+1
@@ -208,17 +202,16 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
 
     ########################################################################################################
 
-        if has_display:
-            cv2.imshow('frame.png', frame)
-            k = cv2.waitKey(1)
-            if k == 27:  # Esc button
-                if disable_vidgear:
-                    video.release()
-                else:
-                    video.stop()
-                break
-        else:
-            cv2.imwrite('frame.png', frame)
+        
+        cv2.imshow('frame.png', frame)
+        k = cv2.waitKey(1)
+        if k == 27:  # Esc button
+            if disable_vidgear:
+                video.release()
+            else:
+                video.stop()
+            break
+      
 
         if save_video:
             if video_writer is None:
@@ -235,8 +228,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--camera_id", "-d", help="open the camera with the specified id", type=int, default=0)
-    parser.add_argument("--filename", "-f", help="open the specified video (overrides the --camera_id option)",
-                        type=str, required=True)
     # type=str, default='squats.mp4')
     parser.add_argument("--exercise_type", "-et",
                         help="1 for pushups, 2 for squats, 3 for pullups 4 for dumbell curl 5 for dumbell side curl", type=int, required=True)
