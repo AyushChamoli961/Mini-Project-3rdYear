@@ -36,7 +36,7 @@ python main.py --filename <path to exercise video> --exercise_type <exercise num
 It can be extended to other exercise as well. 
 
 
-
+To run for live camera feed in real time.
 Example  
 ```  
 python main.py  --exercise_type 3 
