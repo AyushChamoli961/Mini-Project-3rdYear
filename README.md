@@ -30,14 +30,16 @@ python main.py --filename <path to exercise video> --exercise_type <exercise num
 |--|--|
 | PushUps | 1 |
 | Squats or Situps | 2 |
-| Pullups | 3 |
+| Shoulder Press | 3 |
 | Dumbell Curl | 4 |
 | Dumbell Side Lateral | 5 |
 It can be extended to other exercise as well. 
 
+
+
 Example  
 ```  
-python main.py --filename 'demo_videos/squat.mp4' --exercise_type 2 
+python main.py  --exercise_type 3 
 ```  
 
 ## DEMO  
