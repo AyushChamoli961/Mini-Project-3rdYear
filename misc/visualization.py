@@ -77,8 +77,7 @@ def joints_dict():
     return joints
 
 
-def draw_points_front(image, points, exercise_type,  confidence_threshold=0.5):
-
+def draw_points_front(image, points, exercise_type, confidence_threshold=0.5):
     circle_size = max(1, min(image.shape[:2]) // 160)
 
     y0 = 0
@@ -89,6 +88,7 @@ def draw_points_front(image, points, exercise_type,  confidence_threshold=0.5):
     yls = points[5][0]
     yrs = points[6][0]
     z0, z1, z2 = 0, 0, 0
+    elbow_angle = 0  # Initialize elbow angle
 
     for i, pt in enumerate(points):
         if pt[2] > confidence_threshold:
@@ -103,7 +103,6 @@ def draw_points_front(image, points, exercise_type,  confidence_threshold=0.5):
                                 fontScale, color, thickness, cv2.LINE_AA)
 
         if exercise_type == 3:
-
             if i == 0:
                 y0 = pt[0]
                 z0 = pt[2]
@@ -115,11 +114,19 @@ def draw_points_front(image, points, exercise_type,  confidence_threshold=0.5):
                 z2 = pt[2]
             dist = distance(y0, y1, y2, z0, z1, z2, ylw, yrw)
 
-        if exercise_type == 5:
+            # Calculate elbow angle for exercise type 3
+            if i == 5:  # Left shoulder
+                x1, y1 = pt[1], pt[0]
+            elif i == 7:  # Left elbow
+                x2, y2 = pt[1], pt[0]
+            elif i == 9:  # Left wrist
+                x3, y3 = pt[1], pt[0]
+                elbow_angle = angle(x1, y1, x2, y2, x3, y3)
 
+        if exercise_type == 5:
             dist = distance_dumbell(yls, yrs, ylw, yrw)
 
-    return image, dist
+    return image, dist, elbow_angle
 
 
 def draw_points_one_side(image, points, exercise_type, confidence_threshold=0.5):
@@ -215,14 +222,14 @@ def draw_points_and_skeleton(image, points, skeleton, person_index=0,
     # plt.imshow(image)
     # plt.show()
 
-    if exercise_type == 1 or exercise_type == 2 or str(exercise_type)[0] == str(4):
+    if  exercise_type == 1 or exercise_type == 2 or str(exercise_type)[0] == str(4):
         image, angle = draw_points_one_side(
             image, points, exercise_type,  confidence_threshold=confidence_threshold)
 
     elif exercise_type == 3 or exercise_type == 5:
-        image, angle = draw_points_front(
+        image, data, angle = draw_points_front(
             image, points, exercise_type, confidence_threshold=confidence_threshold)
-    return image, angle
+    return image, data, angle
 
 
 def save_images(images, target, joint_target, output, joint_output, joint_visibility, summary_writer=None, step=0,

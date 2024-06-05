@@ -70,6 +70,7 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
     prev_flag = flag
     counter = 0
     data = 0
+    angle = 0
     prev_data = data
 
     while True:
@@ -106,13 +107,13 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
             person_ids = np.arange(len(pts), dtype=np.int32)
 
         for i, (pt, pid) in enumerate(zip(pts, person_ids)):
-            frame, data = draw_points_and_skeleton(frame, pt, joints_dict(
+            frame, data, angle = draw_points_and_skeleton(frame, pt, joints_dict(
             )[hrnet_joints_set]['skeleton'], person_index=pid, exercise_type=exercise_type)
 
         frame = cv2.rectangle(
             frame, (0, 0), (int(frame.shape[1]*0.7), int(frame.shape[0]*0.1)), (0, 0, 0), -1)
 
-        fps = 1. / (time.time() - t)
+        fps = 60
         font = cv2.FONT_HERSHEY_SIMPLEX
         org = (int(frame.shape[1]*0.01), int(frame.shape[0]*0.035))
         fontScale = frame.shape[0] * 0.0014
@@ -157,19 +158,45 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
             frame = cv2.putText(frame, text, org, font,
                                 fontScale, color, thickness*2, cv2.LINE_AA)
 
-        elif exercise_type == 3:  # for PullUps
-            print(data)
-            if (len(pts) > 0):
-                if (data == -1 and prev_data == 1):
-                    counter = counter+1
+        elif exercise_type == 3:  # for Shoulder Press
+            # print(angle)
+            if len(pts) > 0:
+                if angle > 140:
+                    flag = 0  # Arm bent
+                elif angle < 70:
+                    flag = 1  # Arm extended
+                
+               
+                
+                print("watch this",prev_flag, flag)
+                # Check if the previous rep was incomplete
+                if prev_flag == 0 and flag == 2:
+                    incomplete_rep_text = " rep is incomplete!"
+                    cv2.putText(frame, incomplete_rep_text, (10, 60), cv2.FONT_HERSHEY_TRIPLEX,
+                                fontScale * 2, (0, 0, 255), thickness * 2, cv2.LINE_AA)
+                    # White background
+                    cv2.rectangle(frame, (5, 50),
+                                (frame.shape[1] // 4, 80), (255, 255, 255), -1)
 
-            prev_data = data
+                # Check if the user is overextending the arms
+                if angle > 170:
+                    overextension_text = "Overextending arms!"
+                    cv2.putText(frame, overextension_text, (10, 90), cv2.FONT_HERSHEY_TRIPLEX,
+                                fontScale * 2, (0, 0, 255), thickness * 2, cv2.LINE_AA)
+                    # White background
+                    cv2.rectangle(frame, (5, 80),
+                                (frame.shape[1] // 4, 100), (255, 255, 255), -1)
 
-            org = (int(frame.shape[1]*0.01), int(frame.shape[0]*0.08))
-            text = "PullUps Count="+str(counter)
-            frame = cv2.putText(frame, text, org, font,
-                                fontScale, color, thickness*2, cv2.LINE_AA)
+                # Count reps
+                if prev_flag == 1 and flag == 0:
+                    counter += 1
 
+            prev_flag = flag
+
+            org = (int(frame.shape[1] * 0.01), int(frame.shape[0] * 0.08))
+            text = "Shoulder Press Count=" + str(counter)
+            frame = cv2.putText(frame, text, org, font, fontScale,
+                                color, thickness * 2, cv2.LINE_AA)
         elif exercise_type == 4:  # for dumbell curl
 
             if (len(pts) > 0):
