@@ -12,9 +12,7 @@ from vidgear.gears import CamGear
 import numpy as np
 
 
-def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, image_resolution,
-         single_person, use_tiny_yolo, disable_tracking, max_batch_size, disable_vidgear, save_video, video_format,
-         video_framerate, device, exercise_type):
+def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, image_resolution, single_person, use_tiny_yolo, disable_tracking, max_batch_size, disable_vidgear, save_video, video_format, video_framerate, device, exercise_type):
     if device is not None:
         device = torch.device(device)
     else:
@@ -26,14 +24,18 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
 
     image_resolution = ast.literal_eval(image_resolution)
     has_display = 'DISPLAY' in os.environ.keys() or sys.platform == 'win32'
-    # has_display = False
     video_writer = None
 
-    if disable_vidgear:
+    if filename is not None:
+        video = cv2.VideoCapture(filename)
+        assert video.isOpened()
+    elif disable_vidgear:
         video = cv2.VideoCapture(camera_id)
         assert video.isOpened()
     else:
         video = CamGear(camera_id).start()
+
+    # Rest of the code...
 
     if use_tiny_yolo:
         yolo_model_def = "./models/detectors/yolo/config/yolov3-tiny.cfg"
@@ -75,9 +77,10 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
 
     while True:
         t = time.time()
-
-        
-        frame = video.read()
+        if filename is not None:
+            ret, frame = video.read()
+        else:
+            frame = video.read()
         if frame is None:
             break
 
@@ -113,7 +116,7 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
         frame = cv2.rectangle(
             frame, (0, 0), (int(frame.shape[1]*0.7), int(frame.shape[0]*0.1)), (0, 0, 0), -1)
 
-        fps = 60
+        fps = 1. / (time.time() - t)
         font = cv2.FONT_HERSHEY_SIMPLEX
         org = (int(frame.shape[1]*0.01), int(frame.shape[0]*0.035))
         fontScale = frame.shape[0] * 0.0014
@@ -159,16 +162,13 @@ def main(camera_id, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, 
                                 fontScale, color, thickness*2, cv2.LINE_AA)
 
         elif exercise_type == 3:  # for Shoulder Press
-            # print(angle)
+            print(angle)
             if len(pts) > 0:
                 if angle > 140:
                     flag = 0  # Arm bent
                 elif angle < 70:
                     flag = 1  # Arm extended
                 
-               
-                
-                print("watch this",prev_flag, flag)
                 # Check if the previous rep was incomplete
                 if prev_flag == 0 and flag == 2:
                     incomplete_rep_text = " rep is incomplete!"
@@ -255,6 +255,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--camera_id", "-d", help="open the camera with the specified id", type=int, default=0)
+    parser.add_argument(
+        "--filename", "-f", help="open the specified video (overrides the --camera_id option)", type=str, default=None)
+
+
     # type=str, default='squats.mp4')
     parser.add_argument("--exercise_type", "-et",
                         help="1 for pushups, 2 for squats, 3 for pullups 4 for dumbell curl 5 for dumbell side curl", type=int, required=True)

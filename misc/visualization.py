@@ -130,6 +130,7 @@ def draw_points_front(image, points, exercise_type, confidence_threshold=0.5):
 
 
 def draw_points_one_side(image, points, exercise_type, confidence_threshold=0.5):
+    data = 0    
     # ToDo Shape it taking into account the size of the detection
     circle_size = max(1, min(image.shape[:2]) // 160)
     x1 = 0
@@ -177,7 +178,7 @@ def draw_points_one_side(image, points, exercise_type, confidence_threshold=0.5)
 
         ang = angle(x1, y1, x2, y2, x3, y3)
 
-    return image, ang
+    return image, ang, data
 
 
 
@@ -223,7 +224,7 @@ def draw_points_and_skeleton(image, points, skeleton, person_index=0,
     # plt.show()
 
     if  exercise_type == 1 or exercise_type == 2 or str(exercise_type)[0] == str(4):
-        image, angle = draw_points_one_side(
+        image, data, angle  = draw_points_one_side(
             image, points, exercise_type,  confidence_threshold=confidence_threshold)
 
     elif exercise_type == 3 or exercise_type == 5:
