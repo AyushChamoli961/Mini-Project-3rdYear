@@ -1,3 +1,6 @@
+import tkinter as tk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 from misc.utils import find_person_id_associations
 from misc.visualization import draw_points_and_skeleton, joints_dict
 from model import SimpleHRNet
@@ -10,6 +13,48 @@ import time
 import torch
 from vidgear.gears import CamGear
 import numpy as np
+
+import matplotlib
+matplotlib.use('Agg')
+
+keypoints = {
+    0: "nose",
+    1: "left_eye",
+    2: "right_eye",
+    3: "left_ear",
+    4: "right_ear",
+    5: "left_shoulder",
+    6: "right_shoulder",
+    7: "left_elbow",
+    8: "right_elbow",
+    9: "left_wrist",
+    10: "right_wrist",
+    11: "left_hip",
+    12: "right_hip",
+    13: "left_knee",
+    14: "right_knee",
+    15: "left_ankle",
+    16: "right_ankle"
+}
+
+def save_graph(angle_data):
+    plt.figure(figsize=(10, 6))
+    plt.plot(angle_data)
+    plt.title('Angle Over Time')
+    plt.xlabel('Frame')
+    plt.ylabel('Angle (degrees)')
+    plt.savefig('angle_plot.png', dpi=300, bbox_inches='tight')
+
+
+
+def update_graph(angle_data):
+    angle_plot.clear()
+    angle_plot.plot(angle_data)
+    angle_plot.set_xlabel('Frame')
+    angle_plot.set_ylabel('Angle (degrees)')
+    angle_plot.set_title('Angle Over Time')
+    canvas.draw()
+    root.update()
 
 
 def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_joints_set, image_resolution, single_person, use_tiny_yolo, disable_tracking, max_batch_size, disable_vidgear, save_video, video_format, video_framerate, device, exercise_type):
@@ -75,6 +120,9 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
     angle = 0
     prev_data = data
 
+    angle_data = []
+    pts_data = []
+
     while True:
         t = time.time()
         if filename is not None:
@@ -85,6 +133,8 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
             break
 
         pts = model.predict(frame)
+        pts_data.append(pts)
+
         if not disable_tracking:
             boxes, pts = pts
             if len(pts) > 0:
@@ -113,6 +163,7 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
             frame, data, angle = draw_points_and_skeleton(frame, pt, joints_dict(
             )[hrnet_joints_set]['skeleton'], person_index=pid, exercise_type=exercise_type)
 
+        
         frame = cv2.rectangle(
             frame, (0, 0), (int(frame.shape[1]*0.7), int(frame.shape[0]*0.1)), (0, 0, 0), -1)
 
@@ -126,13 +177,13 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                             fontScale*0.35, color, thickness, cv2.LINE_AA)
 
         if exercise_type == 1:  # for pushUps
+            angle_data.append(data)
             print(data)
-
             if (len(pts) > 0):
                 
-                if (data > 160):
+                if (data > 165):
                     flag = 0
-                if (data < 90):
+                if (data < 70):
                     flag = 1
                 if (prev_flag == 1 and flag == 0):
                     counter = counter+1
@@ -145,7 +196,8 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                                 fontScale, color, thickness*2, cv2.LINE_AA)
 
         elif exercise_type == 2:  # for Squats
-
+            print(data)
+            angle_data.append(data)
             if (len(pts) > 0):
                 if (data > 150):
                     flag = 0
@@ -163,6 +215,7 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
 
         elif exercise_type == 3:  # for Shoulder Press
             print(angle)
+            angle_data.append(angle)
             if len(pts) > 0:
                 if angle > 140:
                     flag = 0  # Arm bent
@@ -179,7 +232,7 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                                 (frame.shape[1] // 4, 80), (255, 255, 255), -1)
 
                 # Check if the user is overextending the arms
-                if angle > 170:
+                if angle > 180:
                     overextension_text = "Overextending arms!"
                     cv2.putText(frame, overextension_text, (10, 90), cv2.FONT_HERSHEY_TRIPLEX,
                                 fontScale * 2, (0, 0, 255), thickness * 2, cv2.LINE_AA)
@@ -198,9 +251,10 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
             frame = cv2.putText(frame, text, org, font, fontScale,
                                 color, thickness * 2, cv2.LINE_AA)
         elif exercise_type == 4:  # for dumbell curl
-
+            print(data)
+            angle_data.append(data)
             if (len(pts) > 0):
-                if (data > 110):
+                if (data > 150):
                     flag = 0
                 if (data < 60):
                     flag = 1
@@ -215,12 +269,17 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
                                 fontScale, color, thickness*2, cv2.LINE_AA)
 
         elif exercise_type == 5:  # for dumbell side lateral
-
+            print(angle)
+            angle_data.append(angle)
             if (len(pts) > 0):
-                if (data == -1 and prev_data == 1):
+                if (angle > 120):
+                    flag = 0
+                if (angle < 30):
+                    flag = 1
+                if (prev_flag == 1 and flag == 0):
                     counter = counter+1
 
-            prev_data = data
+            prev_flag = flag
 
             org = (int(frame.shape[1]*0.01), int(frame.shape[0]*0.08))
             text = "Dumbell Side Count="+str(counter)
@@ -233,13 +292,15 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
         cv2.imshow('frame.png', frame)
         k = cv2.waitKey(1)
         if k == 27:  # Esc button
+            print("Total Reps: ", counter, angle)
+            save_graph(angle_data)
             if disable_vidgear:
                 video.release()
             else:
                 video.stop()
             break
-      
-
+    
+        
         if save_video:
             if video_writer is None:
                 fourcc = cv2.VideoWriter_fourcc(*video_format)  # video format
@@ -249,7 +310,8 @@ def main(camera_id, filename, hrnet_m, hrnet_c, hrnet_j, hrnet_weights, hrnet_jo
 
     if save_video:
         video_writer.release()
-
+    save_graph(angle_data)
+    print(pts_data)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

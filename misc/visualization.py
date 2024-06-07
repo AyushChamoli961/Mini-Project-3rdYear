@@ -12,6 +12,8 @@ colors = np.round(np.array(plt.get_cmap('gist_rainbow')(
     np.linspace(0, 1, 16))) * 255).astype(np.uint8)[:, -2::-1].tolist()
 
 
+
+
 def joints_dict():
     joints = {
         "coco": {
@@ -125,6 +127,13 @@ def draw_points_front(image, points, exercise_type, confidence_threshold=0.5):
 
         if exercise_type == 5:
             dist = distance_dumbell(yls, yrs, ylw, yrw)
+            if i == 6:  # Left shoulder
+                x1, y1 = pt[1], pt[0]
+            elif i == 10:  # Left elbow
+                x2, y2 = pt[1], pt[0]
+            elif i == 12:  # Left wrist
+                x3, y3 = pt[1], pt[0]
+                elbow_angle = angle(x1, y1, x2, y2, x3, y3)
 
     return image, dist, elbow_angle
 
