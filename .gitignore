@@ -5,10 +5,8 @@ tempCodeRunnerFile.py
 input*.*
 main_copy.py
 misc/visualization_copy.py
-*.mp4
 *.pth
 *__init__.py
 weights/*
 output_video/*
-demo_videos/*
 debug*.py
